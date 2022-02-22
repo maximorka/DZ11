@@ -1,7 +1,8 @@
 package Task1;
 
+import lombok.SneakyThrows;
+
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class T1 {
@@ -9,51 +10,83 @@ public class T1 {
     static class TimeCalc extends Thread {
 
         private long time;
+        private T1 t1;
 
-        public TimeCalc(long time) {
+        public TimeCalc(long time, T1 t1) {
             this.time = time;
+            this.t1 = t1;
+        }
+        public List<TimeListener> listeners = new ArrayList<TimeListener>();
+
+        public void addListeners(TimeListener timeListener) {
+            listeners.add(timeListener);
         }
 
-        public List<TimePrinter> listeners = new ArrayList<TimePrinter>();
-
-        public void addListeners(TimePrinter timePrinter) {
-            listeners.add(timePrinter);
-        }
-
-        public void toListeners(long time) {
+        public void toListeners() {
             if (listeners.size() > 0) {
-                for (TimePrinter listener : listeners) {
-                    listener.print(time);
+                for (TimeListener listener : listeners) {
+                    listener.doSmth();
                 }
             }
         }
 
+        @SneakyThrows
         public void run() {
             while (true) {
-
+                t1.printTime(time);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
                 time += 1;
-                toListeners(time);
-                System.out.println("Time work program is "+time+" c");
+                toListeners();
+            }
+        }
+    }
+
+    public static class OnlyPrint extends Thread {
+
+        private T1 t1;
+
+        public OnlyPrint( T1 t1) {
+            this.t1 = t1;
+        }
+
+        @SneakyThrows
+        public void run() {
+            while (true) {
+                t1.printEvery5sec();
             }
         }
     }
 
     public static void main(String[] args) {
-        T1 t1 =new T1();
-        TimeCalc timeCalc = new TimeCalc(0);
+        T1 t1 = new T1();
+
+        TimeCalc timeCalc = new TimeCalc(0,t1);
         timeCalc.start();
 
-        timeCalc.addListeners(t1::printDataTime);
+        OnlyPrint onlyPrint = new OnlyPrint(t1);
+        onlyPrint.start();
+
     }
 
+    public synchronized void printTime(long time) {
+        System.out.println("Time work program is " + time + " c");
 
-    public void printDataTime(long time) {
         if (time % 5 == 0)
-            System.out.println("Пройшло 5 сек");
+            notify();
     }
+
+    public synchronized void printEvery5sec() {
+        try {
+            wait();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Пройшло 5 сек");
+    }
+
+
 }
